@@ -30,7 +30,7 @@ Note that there is no .prj file - so no projection information will come along w
 Here are two different ways to read in spatial vector data, each with advantages and disadvantages:
 ```{r read shapefiles 1}
 library(rgdal)
-dir_spatial   <- '~/github/ohibc/spatial_data'
+dir_spatial   <- '~/github/spatial_analysis2_R/spatial_data'
 layer_bc <- 'ohibc_rgn'
 
 poly_bc_rgn <- readOGR(dsn = path.expand(dir_spatial), layer = layer_bc, stringsAsFactors = FALSE)
@@ -74,13 +74,15 @@ One note, learned the annoying painful way, is that if you wish to read layers f
 Once the shapefile is read in, it becomes a SpatialPolygonsDataFrame object (from the `sp` package).  SpatialPolygonsDataFrame store shape info and attributes in different slots, with a structure like this:
 
 * `SpatialPolygonsDataFrame` (top level structure)
-    * `data`: a dataframe that holds the attribute table; each row correlates with a polygon in the `polygons` slot.
-    * `polygons`: a list of Polygons-class objects, each with their own bits and pieces.  Each item in the list is a complete polygon feature, made up of sub-polygons; and each item in the list corresponds with a row in the dataframe in the `data` slot.
-    * `plotOrder`: a vector of integers showing which order to plot the `polygons` list
-    * `bbox`: info on the bounding coordinates (x & y min & max).
-    * `proj4string`: a CRS object that contains projection or coordinate system info
+    * `@data`: a dataframe that holds the attribute table; each row correlates with a polygon in the `polygons` slot.
+    * `@polygons`: a list of Polygons-class objects, each with their own bits and pieces.  Each item in the list is a complete polygon feature, made up of sub-polygons; and each item in the list corresponds with a row in the dataframe in the `data` slot.
+    * `@plotOrder`: a vector of integers showing which order to plot the `polygons` list
+    * `@bbox`: info on the bounding coordinates (x & y min & max).
+    * `@proj4string`: a CRS object that contains projection or coordinate system info
     
-Each of these slots can be accessed by a `@` symbol (rather than a `$` symbol).  If your SpatialPolygonsDataFrame is called `x`, then you can access the attribute table by calling `x@data` and treat it exactly like a regular data frame.
+![SpatialPolygonsDataFrame structure](spdf_sketch.png)
+
+Each of these slots can be accessed by a `@` symbol (rather than a `$` symbol).  If your SpatialPolygonsDataFrame is called `x`, then you can access the attribute table by calling `x@data` and treat it exactly like a regular data frame (though be wary of operations that might change the order or length of the data frame - confusion and chaos will reign!)
 
 ```{r viewing SpatialPolygonsDataFrame slots}
 ### view the overall structure
