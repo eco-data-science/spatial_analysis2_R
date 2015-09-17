@@ -1,3 +1,4 @@
++
 ---
 title: "Spatial workshop 2: polygons, shapefiles, and other such nonsense"
 output: html_document
