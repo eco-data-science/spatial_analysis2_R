@@ -29,7 +29,7 @@ Note that there is no .prj file - so no projection information will come along w
 ### Reading shapefiles
 
 Here are two different ways to read in spatial vector data, each with advantages and disadvantages:
-```{r read shapefiles 1}
+```{r read shapefiles 1, echo = TRUE, eval = TRUE}
 library(rgdal)
 dir_spatial   <- '~/github/spatial_analysis2_R/spatial_data'
 layer_bc <- 'ohibc_rgn'
@@ -43,13 +43,15 @@ plot(poly_bc_rgn, col = 'light blue', border = 'blue')
 ```
 
 * `dsn` is the data source name.  It can be a .gdb or a directory with shapefiles in it.  It can be relative or absolute file path.
+    * `dsn` is not a fan of `~` as a shortcut for home directory, e.g. `dsn = '~/github/ohiprep`.
+    * To get around this, one option is to use `path.expand()`, e.g. `dsn = path.expand('~/github/ohiprep')'
 * `layer` is the layer name.  
     * If you're reading from a .gdb, you can tell it which layer to pull out of that .gdb 
         * `ogrListLayers()` can help identify the layers within the .gdb if you're not sure.
     * If you're reading a .shp (and the associated .dbf etc), then `layer` should be the base name of the shapefile (without the .shp extension).  E.g. if you want `rgn_all_mol_med_res.shp`, then `layer = 'rgn_all_mol_low_res'`.
 * `p4s` allows you to input a proj.4 string to indicate a CRS.  If there's already a .prj file associated with this layer, `readOGR()` will automatically read it in.
 
-```{r read shapefiles 2}
+```{r read shapefiles 2, echo = TRUE, eval = TRUE}
 library(maptools)
 shp_bc <- file.path(dir_spatial, layer_bc)
 p4s_bc <- CRS('+proj=aea +lat_1=50 +lat_2=58.5 +lat_0=45 +lon_0=-126 +x_0=1000000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0')
@@ -85,7 +87,7 @@ Once the shapefile is read in, it becomes a SpatialPolygonsDataFrame object (fro
 
 Each of these slots can be accessed by a `@` symbol (rather than a `$` symbol).  If your SpatialPolygonsDataFrame is called `x`, then you can access the attribute table by calling `x@data` and treat it exactly like a regular data frame (though be wary of operations that might change the order or length of the data frame - confusion and chaos will reign!)
 
-```{r viewing SpatialPolygonsDataFrame slots}
+```{r viewing SpatialPolygonsDataFrame slots, echo = TRUE, eval = TRUE}
 ### view the overall structure
 summary(poly_bc_rgn)
 
@@ -108,7 +110,7 @@ You can also manipulate these slots individually, for example filtering out rows
 ### Adding data to polygons
 
 If you'd like to add a column of data to the SpatialPolygonsDataFrame, for example harvest tonnes or a region ID value, you should be able to simply access the `data` slot and treat it like a data frame.
-```{r adding data to SpatialPolygonsDataFrame}
+```{r adding data to SpatialPolygonsDataFrame, echo = TRUE, eval = TRUE}
 ### create a data frame of harvest per region.  Note not all regions are represented here!
 harv_data <- data.frame(rgn_id   = c(  1,  2,  3,  5,  8),
                         h_tonnes = c(105, 89, 74, 21, 11))
@@ -125,7 +127,7 @@ poly_bc_rgn@data
 
 Use indexing to select just rows where there is harvest data.  This eliminates the polygons as well as the attribute table rows, and resets the plot order.  Probably safer than filtering on the data slot directly...
 
-```{r selecting/filtering by attribute}
+```{r selecting/filtering by attribute, echo = TRUE, eval = TRUE}
 ### Select only regions with non-NA harvest values
 poly_bc_harvest <- poly_bc_rgn[!is.na(poly_bc_rgn@data$h_tonnes), ]
 
@@ -137,7 +139,7 @@ poly_bc_harvest@data
 
 Mismatched coordinate reference systems are just as much a pain in the ass in R as they are in ArcGIS or QGIS.  But they're easy to work with once you know how to inspect them and re-project them.
 
-```{r fixing projections}
+```{r fixing projections, echo = TRUE, eval = TRUE}
 
 poly_bc_mpa <- readShapePoly(file.path(dir_spatial, 'mpa_bc'))
 
@@ -172,7 +174,7 @@ While it is possible to use vector geoprocessing to figure this out, overlapping
 
 ### Creating a raster from scratch
 
-```{r set up base raster}
+```{r set up base raster, echo = TRUE, eval = TRUE}
 library(raster)
 
 ### use poly_bc_rgn to set raster extents and then round to nearest km
@@ -192,7 +194,7 @@ rast_base ### inspect it: resolution and extents are nice and clean
 
 Next step: rasterize the MPA polygons.  See later in the doc for an alternative to raster::rasterize() that is way faster, avoids some odd problems, but has a fairly important limitation.
 
-```{r rasterize MPA polygons}
+```{r rasterize MPA polygons, echo = TRUE, eval = TRUE}
 rast_bc_mpa <- rasterize(poly_bc_mpa, rast_base, field = 'STATUS_YR', fun = 'min')
 ```
 
@@ -208,7 +210,7 @@ The basic arguments are simply the raster with the interesting data, and the pol
 
 It's a bit processor-intensive so be patient...
 
-```{r raster::extract()}
+```{r raster::extract(), echo = TRUE, eval = TRUE}
 ### for this, let's see how much area within 3 nautical miles of the coast
 ### is designated as a protected area.
 poly_bc_3nm <- readShapePoly(fn = file.path(dir_spatial, 'ohibc_offshore_3nm'), proj4string = p4s_bc)
@@ -222,7 +224,7 @@ mpa_by_rgn <- raster::extract(rast_bc_mpa, poly_bc_3nm)
 
 `raster::extract()` returns a list of vectors; each list item is a vector of all the cell values contained within one of the polygon features (`poly_bc_3nm@polygons`).  At this point, we need to assign a non-generic name to our list items so we can keep track.  The following line names the list items according to the `rgn_id` column in the attribute table contained in `poly_bc_3nm@data` (this works since the list is in order of items in the `polygons` slot, which is the same order of attributes in the `data` slot).
 
-```{r name list elements from raster::extract}
+```{r name list elements from raster::extract, echo = TRUE, eval = TRUE}
 names(mpa_by_rgn) <- poly_bc_3nm@data$rgn_id
 
 # names(mpa_by_rgn_weights) <- poly_bc_3nm@data$rgn_id
@@ -237,7 +239,7 @@ To get the data out of annoying list form and into convenient data frame form, t
 
 Voilà! a data frame of cell values by region.
 
-```{r convert list elements to data frame}
+```{r convert list elements to data frame, echo = TRUE, eval = TRUE}
 ### For the dataframe without cell weights, each list is just a
 ### vector of values, so we can simply assign that to a column in
 ### the data frame.
@@ -305,13 +307,15 @@ rast_3nm_gdal <- gdal_rasterize(
 
 The `rgeos` package has some helpful functions for manipulating SpatialPolygons - including ways to check invalid geometries and typical GIS tools for checking and manipulating geometries, such as `gUnion()`, `gDifference()`, `gIntersection()`, `gBuffer()`, etc.
 
+### Fixing invalid polygon geometries in R
+
 Sometimes shape files have errors - common ones are too few points and self-intersections.  `rgeos::gIsValid()` can tell you whether the SpatialPolygons* object is valid or not, but it can't fix it directly.
 
 * An internet search might show you a few ways to repair invalid geometries, but some (like setting a buffer of zero width) have unintended consequences - that one just deletes offending polygons entirely.  Not cool, bro!
 * The `cleangeo` package has tools for identifying problems, and has a tool to repair geometries.
     * It's not on CRAN but you can install from github.
 
-``` { r identifying and fixing errors}
+``` {r identifying and fixing errors, echo = TRUE, eval = FALSE}
 library(rgeos)
 gIsValid(poly_bc_rgn, byid = TRUE) 
   ### checks valid geometries; in this case, two polygon features
@@ -335,7 +339,7 @@ issues ### two polygons with problems
 
 Note: make sure you have all your CRS and projection stuff figured out first!
 
-```{r plotting polygons in ggplot}
+```{r plotting polygons in ggplot, echo = TRUE, eval = TRUE}
 library(ggplot2)
 library(RColorBrewer)
 
