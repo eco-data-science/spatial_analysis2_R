@@ -103,14 +103,14 @@ Each of these slots can be accessed by a `@` symbol (rather than a `$` symbol). 
 ```{r viewing SpatialPolygonsDataFrame slots, echo = TRUE, eval = TRUE}
 ### view the overall structure
 summary(poly_bc_rgn)
-str(poly_bc_rgn, max.level = 3) ### view object structure, similar to summary
+# str(poly_bc_rgn, max.level = 3) ### view object structure, similar to summary
 
 ### check out the attribute table in the data slot
 head(poly_bc_rgn@data)
 
 ### check out the basics of the polygon features
 summary(poly_bc_rgn@polygons)  ### summary of the polygon features
-str(poly_bc_rgn@polygons, max.level = 3)
+# str(poly_bc_rgn@polygons, max.level = 3)
 
 ### inspect one of the smaller sub-polys that make up the first polygon
 ### feature; this one draws a small hole in the main polygon
@@ -203,7 +203,7 @@ poly_bc_mpa@proj4string
 poly_bc_rgn@proj4string  ### OK, now they match!
 
 plot(poly_bc_rgn, col = rgb(.7, .7, 1), border = rgb(0, 0, 1))
-plot(poly_bc_mpa, col = rgb(1, .5, .5, .5), border = NA, add = TRUE)
+plot(poly_bc_mpa, col = rgb(1, .5, .5, .5), border = rgb(1, .3, .3, .8), add = TRUE)
   ### The semi-transparency not only looks way awesome, but also
   ### allows us to see whether there are any overlapping polygons!
 ```
@@ -212,58 +212,44 @@ Note that transforming might introduce geometry errors in a previously error-fre
 
 # Geoprocessing tools
 
-The `rgeos` package has many of the standard geoprocessing tools available, for example: `gArea()`, `gDifference()`, `gIntersection()`, `gBuffer()`...
+The `rgeos` package has many of the standard geoprocessing tools available, for example: `gArea()`, `gDifference()`, `gIntersection()`, `gBuffer()`... and the `raster` package builds further upon some of these.  For example, `rgeos::gIntersection()` and `raster::intersect()` both return polygon entities but `gIntersection()` drops the data frames (apparently on purpose...?)
+
 Let's apply those to our polygon layers, in order to find how much of the coastline is protected by marine protected areas.  Here's what we'll try:
 
-* Create a near-shore MPA layer by intersecting the MPA layer with the 3 nautical mile offshore layer
-* Find the total area of the near-shore ocean, from the coastline out to 3 nautical miles, for each of BC's regions.
+* Create a near-shore MPA layer by intersecting (`raster::intersect()`) the MPA layer with the 3 nautical mile offshore layer
+* Find the total area (`rgeos::gArea()`) of the near-shore ocean, from the coastline out to 3 nautical miles, for each of BC's regions.
 * Find the area of MPAs within 3 nm, and divide it by the total near-shore area.
 
 ``` {r}
 ### Load in the 3 nm buffer layer
-poly_bc_3nm <- readShapePoly(fn = file.path(dir_spatial, 'ohibc_offshore_3nm_simple2'), proj4string = p4s_bc)
+poly_bc_3nm <- readShapePoly(fn = file.path(dir_spatial, 'ohibc_offshore_3nm_simple'), proj4string = p4s_bc)
 
-### Load in a different MPA layer - drastically simplified and in the proper
-### CRS, to make the gIntersection go faster...
-poly_bc_mpa2 <- readShapePoly(fn = file.path(dir_spatial, 'mpa_bc_simple8'), proj4string = p4s_bc)
+### plot regions, mpa layer, and 3 nm regions
+plot(poly_bc_rgn, col = rgb(.7, .7, 1), border = rgb(0, 0, 1))
+plot(poly_bc_mpa, col = rgb(1, .5, .5, .5), border = rgb(1, .3, .3, .8), add = TRUE)
+plot(poly_bc_3nm, col = rgb(.5, 1, .5, .5), border = rgb(.3, 1, .3, .8), add = TRUE)
 
-### Intersect the MPA layer with the 3 nm regions layer.  This 
-poly_bc_3nm_mpa <- gIntersection(poly_bc_3nm, poly_bc_mpa2)
-```
+### Intersect the MPA layer with the 3 nm regions layer
+poly_bc_3nm_mpa <- raster::intersect(poly_bc_mpa, poly_bc_3nm)
 
-``` {r}
-area <- lapply(poly_bc_3nm@polygons, function(x) sapply(x@Polygons, function(y) y@area))
-    quantile(unlist(area))
-    #       0%          25%          50%          75%         100% 
-    # 8.307850e-11 5.946673e-06 1.224704e-05 3.964384e-05 2.662491e+03 
+### plot the new intersected layer
+plot(poly_bc_3nm_mpa, col = rgb(1, 1, .5, .5), border = rgb(1, 1, .3, .7), add = TRUE)
 
-### Determine min-max area - the max area within each region is presumably the main component of the EEZ;
-### so find the smallest EEZ.
-min(unlist(lapply(area, function(x) (max(x)))))
-for (i in 1:length(area)) {
-  cat(sprintf('rgn %s: largest polygon %.5f (%s)\n', poly_bc_3nm@data$rgn_id[i], max(area[[i]]), poly_bc_3nm@data$rgn_nam[i]))
-} 
-    
-### ditch the small polys;  smallest EEZ region is Bosnia/Herzegovina #232 at 0.00141 so threshold below that.
-### (in Mollweide units (meters), 12791438 m^2)
-### Generalizing to do either gcs or mol projections, since different units, need different area threshold.
-area_threshold <- 500000
-mainPolys <- lapply(area, function(x) which(x > area_threshold))
+### Calculate area of protected areas and coastal regions, and attach to polygons
+poly_bc_3nm_mpa@data$area_km2 <- gArea(poly_bc_3nm_mpa, byid = TRUE) / 1e6
+poly_bc_3nm@data$area_km2 <- gArea(poly_bc_3nm, byid = TRUE) / 1e6
 
-for(i in 1:length(mainPolys)){
-  if(length(mainPolys[[i]]) >= 1 && mainPolys[[i]][1] >= 1){
-    poly_bc_3nm@polygons[[i]]@Polygons  <- poly_bc_3nm@polygons[[i]]@Polygons[mainPolys[[i]]]
-    poly_bc_3nm@polygons[[i]]@plotOrder <- 1:length(poly_bc_3nm@polygons[[i]]@Polygons)
-  }
-}
+### Summarize the total protected area within each region
+prot_area_df <- poly_bc_3nm_mpa@data %>%
+  group_by(rgn_id, rgn_name, rgn_code) %>%
+  summarize(prot_area_km2 = sum(area_km2)) %>%
+  left_join(poly_bc_3nm@data %>% 
+              select(rgn_id, tot_area_km2 = area_km2),
+            by = 'rgn_id') %>%
+  mutate(prot_area_pct = round(prot_area_km2 / tot_area_km2, 3) * 100)
 
-poly_bc_3nm@plotOrder <- 1:length(poly_bc_3nm@polygons)
+knitr::kable(prot_area_df)
 
-slot(poly_bc_3nm, "polygons") <- lapply(slot(poly_bc_3nm, "polygons"), 
-   checkPolygonsHoles) 
-
-writeOGR(poly_bc_3nm, dsn = dir_spatial, layer = 'ohibc_offshore_3nm_simple2', driver = 'ESRI Shapefile', overwrite_layer = TRUE)
-# is plotOrder necessary to be continuous?  that would explain this line.
 ```
 
 # Rasters and polygons
@@ -308,7 +294,7 @@ Next step: rasterize the MPA polygons.  See later in the doc for info on `gdalUt
 In this case, we will rasterize the MPA polygons using the `rast_base` raster to set extents and cell size.  The cells will get the value of the `STATUS_YR` attribute (the year in which the MPA was designated); for overlapping MPAs, the earliest year ('min') will be used.
 
 ```{r rasterize MPA polygons, echo = TRUE, eval = TRUE}
-rast_bc_mpa <- rasterize(poly_bc_mpa2, rast_base, field = 'STATUS_YR', fun = 'min')
+rast_bc_mpa <- rasterize(poly_bc_mpa, rast_base, field = 'STATUS_YR', fun = 'min')
 ```
 
 Note that the `raster` package also contains functions for `rasterToPolygons()`, `rasterToPoints()`, etc. to turn rasters into vector spatial objects.
@@ -383,18 +369,26 @@ for (rgn_id in names(mpa_by_rgn)) {
 Now we can use that data frame like any regular data frame.  Let's find out how many cells in each region, and how many of those cells are protected by MPAs.  We'll ignore the year for now; any cell with a non-NA will count as protected.
 
 ``` {r}
-mpa_rgn_summary <- mpa_rgn_df %>%
+prot_area_df2 <- mpa_rgn_df %>%
   group_by(rgn_id) %>%
-  summarize(cells_mpa = sum(!is.na(year)),
-            cells_tot = n(),
-            pct_mpa   = round(cells_mpa/cells_tot, 3) * 100) %>%
+  summarize(cells_mpa     = sum(!is.na(year)),
+            cells_tot     = n(),
+            prot_area_pct = round(cells_mpa/cells_tot, 3) * 100) %>%
   left_join(poly_bc_rgn@data %>%
               select(rgn_id, rgn_name),
             by = 'rgn_id')
 
-knitr::kable(mpa_rgn_summary)
+prot_area_df <- prot_area_df %>%
+  rename(prot_pct_vec = prot_area_pct) %>%
+  left_join(prot_area_df2 %>%
+              select(rgn_id, prot_pct_rast = prot_area_pct))
+
+knitr::kable(prot_area_df)
 ```
 
+Note the small differences in the protected area percent, depending on whether raster or vector method was used.  
+
+-----
 
 # Further examples
 
@@ -402,11 +396,11 @@ To see much of this stuff put into action, check out [OHIBC LSP script](https://
 
 For a more complex version that maintains the spatial distribution of the data, check out [OHI global 2015 SPP_ICO goal script](https://github.com/OHI-Science/ohiprep/blob/master/globalprep/SPP_ICO/data_prep_SPP.R) and its [associated functions](https://github.com/OHI-Science/ohiprep/blob/master/globalprep/SPP_ICO/R/spp_fxn.R).  In these scripts, a raster of cell IDs is extracted against polygons for many different species; the resulting lists tell which cell IDs contain which species.
 
-This [downres_polygons.R script](https://github.com/OHI-Science/ohiprep/blob/master/globalprep/spatial/downres_polygons.R) was used to simplify the high resolution global polygon shapefiles (308 MB of polygon fun) into [lower resolution files](https://github.com/OHI-Science/ohiprep/tree/master/globalprep/spatial/downres) (.7 MB and 11 MB versions) for quicker plotting.  While the script itself may not be all that useful to you, there are plenty of examples of digging into and manipulating the details of SpatialPolygonsShapeFile objects.  The script first examines each polygon feature, and strips out sub-polygons whose area falls below a certain threshold; then it simplifies the geometry of the remaining polygons using a [Douglas-Peuker algorithm](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm).
+This [downres_polygons.R script](https://github.com/OHI-Science/ohiprep/blob/master/globalprep/spatial/downres_polygons.R) was used to simplify the high resolution global polygon shapefiles (308 MB of polygon fun) into [lower resolution files](https://github.com/OHI-Science/ohiprep/tree/master/globalprep/spatial/downres) (.7 MB and 11 MB versions) for quicker plotting.  While the script itself may not be all that useful to you, there are plenty of examples of digging into and manipulating the details of SpatialPolygonsDataFrame objects.  The script first examines each polygon feature, and strips out sub-polygons whose area falls below a certain threshold; then it simplifies the geometry of the remaining polygons using a [Douglas-Peuker algorithm](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm).
 
 # Appendix
 
-# Alt method of rasterizing polygons
+## Alt method of rasterizing polygons
 
 Most of what you need to know about rasters is covered in Jamie's spatial data workshop.  One added point: an alternative method of rasterizing vector data, when `raster::rasterize()` is causing problems.
 
@@ -424,8 +418,8 @@ rast_3nm_gdal <- gdal_rasterize(
       # the attribute in the shapefile to be assigned to the cell values
     te = c(ext@xmin, ext@ymin, ext@xmax, ext@ymax), 
       # extents for output raster
-    tr = c(1000, 1000),   
-      # resolution for x and y; for my projection, 500 m resolution
+    tr = c(2500, 2500),   
+      # resolution for x and y; for my projection, 2500 m resolution
     tap = TRUE, 
       # target aligned pixels - align coords of extent of output to values of -tr
     a_nodata = NA, 
@@ -439,37 +433,38 @@ rast_3nm_gdal <- gdal_rasterize(
     # a_srs  # override projection
 ```
 
-### More fun with shapefiles and polygons
+## More fun with shapefiles and polygons
 
 The `rgeos` package has some helpful functions for manipulating SpatialPolygons - including ways to check invalid geometries and typical GIS tools for checking and manipulating geometries, such as `gUnion()`, `gDifference()`, `gIntersection()`, `gBuffer()`, etc.
 
-### Finding and fixing invalid polygon geometries in R
+## Finding and fixing invalid polygon geometries in R
 
-Sometimes shape files have errors - common ones are too few points and self-intersections.  `rgeos::gIsValid()` can tell you whether the SpatialPolygons* object is valid or not, but it can't fix the problems directly.
+Sometimes shape files have errors - common ones are too few points or self-intersections.  These errors can be problems with the original data, or can accidentally be introduced when re-projecting, simplifying, or operating on polygons.  `rgeos::gIsValid()` can tell you whether the SpatialPolygons* object is valid or not, but it can't fix the problems directly.
 
-* An internet search might show you a few ways to repair invalid geometries, but some (like setting a buffer of zero width) have unintended consequences - e.g. a zero-width buffer just deletes offending polygons entirely.  Not cool!
+* An internet search might show you a few ways to repair invalid geometries, but some (like setting a buffer of zero width) might have unintended consequences - e.g. a zero-width buffer just deletes offending polygons entirely.  Not cool, bro!
 * The `cleangeo` package has tools for identifying problems, and has a tool to repair geometries.
-    * It's not on CRAN but you can install from github, as shown in the code.
 
 ``` {r identifying and fixing errors, echo = TRUE, eval = FALSE}
-library(rgeos)
-gIsValid(poly_bc_rgn, byid = TRUE) 
-  ### checks valid geometries; in this case, one polygon feature
-  ### has invalid geometries... how to fix it? cleangeo!
-
-library(cleangeo)
-poly_bc_rgn_clean <- clgeo_Clean(poly_bc_rgn, print.log = TRUE)
-gIsValid(poly_bc_rgn_clean, byid = TRUE) ### all good, yay!
+rgn <- readShapePoly(fn = file.path(dir_spatial, 'ohibc_rgn'))
+gIsValid(rgn, byid = TRUE) 
 
 ### cleangeo provides an alternate way of checking geometries if
-### gIsValid isn't good enough for you
-report  <- clgeo_CollectionReport(poly_bc_rgn)
-View(report)
+### you'd like more details on the problems.
+library(cleangeo)
+report  <- clgeo_CollectionReport(rgn)
 issues  <- report %>% filter(valid == FALSE)
 issues ### two polygons with problems
+
+### How to fix it? go into QGIS and fix the geometry (use the reported points)
+### But just for fun, let's try cleangeo! Not perfect - check your results.
+rgn_clean <- clgeo_Clean(rgn, print.log = TRUE)
+issues  <- clgeo_CollectionReport(rgn_clean)
+             %>% filter(valid == FALSE)
+issues ### No more issues?  though gIsValid seems to disagree...
+
 ```
 
-### Plotting polygons with ggplot2
+## Plotting polygons with ggplot2
 
 `ggplot` works with data frames; so if you want to plot a polygon, you need to first turn it into a data frame. `ggplot2::fortify()` takes care of this.  The `region` argument lets you assign a variable within the attribute table to become a region identifier.
 
@@ -500,14 +495,15 @@ head(poly_rgn_df)
 scale_lim <- c(0, max(poly_rgn_df$h_tonnes))
  
 ### To plot land forms, let's load a land shapefile too.
-poly_land    <- readShapePoly(fn = file.path(dir_spatial, 'ohibc_land'), proj4string = p4s_bc)
+poly_land    <- readShapePoly(fn = file.path(dir_spatial, 'ohibc_land_simple'), proj4string = p4s_bc)
 poly_land_df <- fortify(poly_land)
 
 df_plot <- ggplot(data = poly_rgn_df, aes(x = long, y = lat, group = group, fill = h_tonnes)) +  
   theme(axis.ticks = element_blank(), axis.text = element_blank(),
         text = element_text(family = 'Helvetica', color = 'gray30', size = 12),
         plot.title = element_text(size = rel(1.5), hjust = 0, face = 'bold'),
-        legend.position = 'right') + 
+        legend.position = 'right',
+        panel.grid = element_blank()) + 
   scale_fill_gradientn(colours = brewer.pal(10, 'RdYlBu'), space = 'Lab', 
                        na.value = 'gray80', limits = scale_lim) + 
   geom_polygon(color = 'gray80', size = 0.1) +
@@ -518,8 +514,9 @@ df_plot <- ggplot(data = poly_rgn_df, aes(x = long, y = lat, group = group, fill
        x = NULL, y = NULL)
          
 
-df_plot
+print(df_plot)
 
-### ggsave() saves the most recent ggplot object
+### ggsave() saves the most recent ggplot object by default
 ggsave(file.path(dir_spatial, 'bc_harvest.png'), width = 10, height = 6)
+
 ```
