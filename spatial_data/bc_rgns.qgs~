@@ -23,10 +23,10 @@
     <mapcanvas>
         <units>meters</units>
         <extent>
-            <xmin>1111323.13107546465471387</xmin>
-            <ymin>393187.75220700068166479</ymin>
-            <xmax>1111364.34308663522824645</xmax>
-            <ymax>393222.96275599935324863</ymax>
+            <xmin>732156.0005171267548576</xmin>
+            <ymin>1076706.70668289298191667</ymin>
+            <xmax>732238.42453946836758405</xmax>
+            <ymax>1076743.73237238684669137</ymax>
         </extent>
         <projections>1</projections>
         <destinationsrs>
@@ -332,7 +332,7 @@
                 </edittype>
             </edittypes>
         </maplayer>
-        <maplayer minimumScale="-4.65661e-10" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" geometry="Polygon" simplifyMaxScale="1" type="vector" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
+        <maplayer minimumScale="0" maximumScale="1e+08" simplifyDrawingHints="1" minLabelScale="0" maxLabelScale="1e+08" simplifyDrawingTol="1" geometry="Polygon" simplifyMaxScale="1" type="vector" hasScaleBasedVisibilityFlag="0" simplifyLocal="1" scaleBasedLabelVisibilityFlag="0">
             <id>mpa_bc_simple20151119113419536</id>
             <datasource>./mpa_bc_simple.shp</datasource>
             <title></title>
@@ -445,7 +445,7 @@
             </edittypes>
             <renderer-v2 symbollevels="0" type="singleSymbol">
                 <symbols>
-                    <symbol alpha="1" type="fill" name="0">
+                    <symbol alpha="0.498039" type="fill" name="0">
                         <layer pass="0" class="SimpleFill" locked="0">
                             <prop k="border_width_map_unit_scale" v="0,0"/>
                             <prop k="color" v="253,191,111,255"/>
