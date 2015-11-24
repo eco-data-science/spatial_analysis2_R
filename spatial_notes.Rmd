@@ -305,6 +305,8 @@ rast_3nm_gdal <- gdal_rasterize(
 
 The `rgeos` package has some helpful functions for manipulating SpatialPolygons - including ways to check invalid geometries and typical GIS tools for checking and manipulating geometries, such as `gUnion()`, `gDifference()`, `gIntersection()`, `gBuffer()`, etc.
 
+### Identifying and fixing invalid geometries
+
 Sometimes shape files have errors - common ones are too few points and self-intersections.  `rgeos::gIsValid()` can tell you whether the SpatialPolygons* object is valid or not, but it can't fix it directly.
 
 * An internet search might show you a few ways to repair invalid geometries, but some (like setting a buffer of zero width) have unintended consequences - that one just deletes offending polygons entirely.  Not cool, bro!
