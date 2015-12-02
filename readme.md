@@ -1,4 +1,4 @@
-### R Spatial Analysis 2 workshop
+### R Spatial Analysis 2 workshop  
 
 Spatial R workshop focusing on reading and using shapefiles and polygon layers directly in R.  Examples based on Ocean Health Index - British Columbia.  Requires packages: `sp`, `rgdal`, `maptools`, `dplyr`, `tidyr`; optional packages: `ggplot2`, `rgeos`, `cleangeo` (available through Github, not CRAN)
 
