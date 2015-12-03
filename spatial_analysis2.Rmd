@@ -2,12 +2,12 @@
 title: 'Spatial workshop 2: vector spatial data in R'
 author: '*Compiled on `r date()` by `r Sys.info()["user"]`*'
 output:
-  pdf_document:
-    toc: yes
   html_document:
     highlight: haddock
     number_sections: yes
     theme: cerulean
+    toc: yes
+  pdf_document:
     toc: yes
 ---
 ```{r setup, echo = FALSE, message = FALSE}
@@ -100,7 +100,7 @@ Once the shapefile is read in, it becomes a SpatialPolygonsDataFrame object (fro
     * `@bbox`: info on the bounding coordinates (x & y min & max).
     * `@proj4string`: a CRS object that contains projection or coordinate system info
     
-![SpatialPolygonsDataFrame structure](imgs/spdf_sketch.png)
+![SpatialPolygonsDataFrame structure](img/spdf_sketch.png)
 
 Each of these slots can be accessed by a `@` symbol (rather than a `$` symbol).  If your SpatialPolygonsDataFrame is called `x`, then you can access the attribute table by calling `x@data` and treat it exactly like a regular data frame (though be wary of operations that might change the order or length of the data frame - confusion and chaos will reign!)
 
@@ -307,7 +307,7 @@ Note that the `raster` package also contains functions for `rasterToPolygons()`,
 
 Now the big step: `raster::extract()`.  Basically we will overlay a set of region polygons on top of our raster, and group the cells by which region they fall into.  For cells that overlap the border between multiple regions, it will even tell us how much of the cell falls into each region (if we set `weights = TRUE`), but this is very slow...
 
-![raster::extract() image](imgs/rasterextract.png)
+![raster::extract() image](img/rasterextract.png)
 
 Note that `extract()` is also a function in the `tidyr` package and elsewhere; so I generally force the issue by calling `raster::extract()` just to make sure.
 
