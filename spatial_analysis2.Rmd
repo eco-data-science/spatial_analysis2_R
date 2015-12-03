@@ -109,6 +109,9 @@ Each of these slots can be accessed by a `@` symbol (rather than a `$` symbol). 
 summary(poly_bc_rgn)
 # str(poly_bc_rgn, max.level = 3) ### view object structure, similar to summary
 
+### list the slots for this S4 object
+slotNames(poly_bc_rgn)
+
 ### check out the attribute table in the data slot
 head(poly_bc_rgn@data)
 
@@ -145,16 +148,16 @@ poly_bc_rgn@data <- poly_bc_rgn@data %>%
 
 ### note unassigned regions have NA for harvest tonnage
 poly_bc_rgn@data
-
 ```
 
 You should also be able to use `dplyr`- and `tidyr`-type functions like `mutate()` and `group_by()` (since `group_by()` doesn't reorder the rows); just be careful of things like `filter()`, `arrange()`, `summarize()`, and `full_join()` that might reorder or add or delete rows.
 
 ``` {r}
 poly_bc_rgn@data <- poly_bc_rgn@data %>%
-  mutate(h_kg   = h_tonnes * 1000,
-         h_tot  = sum(h_tonnes, na.rm = TRUE),
-         h_prop = round(h_tonnes/h_tot, 3))
+  mutate(
+    h_kg   = h_tonnes * 1000,
+    h_tot  = sum(h_tonnes, na.rm = TRUE),
+    h_prop = round(h_tonnes/h_tot, 3))
 
 poly_bc_rgn@data
 ```
@@ -167,6 +170,9 @@ Use indexing to select just rows where there is harvest data.  This eliminates t
 ```{r selecting/filtering by attribute, echo = TRUE, eval = TRUE}
 ### Select only regions with non-NA harvest values
 poly_bc_harvest <- poly_bc_rgn[!is.na(poly_bc_rgn@data$h_tonnes), ]
+
+### or use base::subset (but not dplyr::filter)
+poly_bc_harvest <- poly_bc_rgn %>% subset(!is.na(h_tonnes))
 
 poly_bc_harvest@data
 
@@ -252,8 +258,10 @@ prot_area_df <- poly_bc_3nm_mpa@data %>%
             by = 'rgn_id') %>%
   mutate(prot_area_pct = round(prot_area_km2 / tot_area_km2, 3) * 100)
 
+# pretty static table
 knitr::kable(prot_area_df)
-
+# or interactive table
+DT::datatable(prot_area_df)
 ```
 
 # Rasters and polygons
