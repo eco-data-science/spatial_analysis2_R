@@ -4,9 +4,9 @@ author: '*Compiled on `r date()` by `r Sys.info()["user"]`*'
 output:
   html_document:
     highlight: haddock
-    number_sections: yes
+    number_sections: no
     theme: cerulean
-    toc: yes
+    toc: no
   pdf_document:
     toc: yes
 ---
