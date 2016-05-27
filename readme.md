@@ -1,16 +1,11 @@
 ### R Spatial Analysis Workshop: Vectors (Polygons and Shapefiles)
 
-Spatial R workshop focusing on reading and using shapefiles and polygon layers directly in R.  Examples based on Ocean Health Index - British Columbia.  Requires a range of spatial packages: `sp`, `rgdal`, `rgeos`, `maptools`, `raster`, and the usual suspects: `dplyr`, `tidyr`, `stringr`; optional packages: `cleangeo`, `gdalUtils`,  `ggplot2`, `RColorBrewer`
+Spatial R workshop focusing on reading and using shapefiles and polygon objects directly in R.  Examples based on Ocean Health Index - British Columbia. 
 
-View the HTML (knitted from the .Rmd): https://rawgit.com/eco-data-science/spatial_analysis2_R/master/spatial_analysis2.html
+View the HTML (knitted from the .Rmd): http://eco-data-science.github.io/spatial_analysis2_R/
 
-Download the PDF (knitted from the .Rmd): https://github.com/eco-data-science/spatial_analysis2_R/blob/master/spatial_analysis2.pdf
 
-View the R Markdown document: https://github.com/eco-data-science/spatial_analysis2_R/blob/master/spatial_notes.Rmd
-
-This tutorial/workshop assumes that you have existing vector spatial data that you want to analyze.  You can create polygons and such directly in R, but we will save that for another time...
-
-# Setup for workshop
+### Setup for workshop
 
 1. __Get the workshop materials:__ Go to the repository and click on the "fork" button to create an independent copy within your own GitHub account.  Alternately, click on the "clone or download" button. https://github.com/eco-data-science/spatial_analysis2_R.
 2. __Install the necessary packages:__

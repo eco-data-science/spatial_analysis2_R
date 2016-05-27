@@ -21,7 +21,13 @@ library(tidyr)
 library(stringr)
 ```
 
+This workshop/tutorial will explore how to work with vector spatial data in R.  We will load spatial data, examine the structure of the spatial data within R, perform some simple analyses using both vector spatial data and raster spatial data, and see some ways to create nice visuals of spatial information.  Once you feel comfortable working with spatial data in R, you will rarely have to worry about using a GIS application at all.
 
+For this workshop/tutorial, we will work through a simplified analysis to examine the proportion of British Columbia's coastal waters that are protected by marine protected areas (MPAs).  This is based on the Ocean Health Index _Lasting Special Places_ sub-goal of the [_Sense of Place_ goal](http://ohi-science.org/goals/#sense-of-place).
+
+# Setup
+
+For info on setting up for the workshop, [please visit the readme.md in the repository.](https://github.com/eco-data-science/spatial_analysis2_R/blob/gh-pages/readme.md)
 
 -----
 
