@@ -29,7 +29,7 @@ Here are two different ways to read in spatial vector data, each with advantages
 
 ### reading shapefiles using `rgdal::readOGR()`
 
-```{r read shapefiles 1}
+```{r read_shapefiles_method1}
 
 dir_spatial   <- 'spatial_data'
 layer_bc <- 'ohibc_rgn_simple'
@@ -63,7 +63,7 @@ Quick aside on projections and coordinate reference systems:
 
 ### reading shapefiles using `maptools::readShapePoly()`
 
-```{r read shapefiles 2, echo = TRUE, eval = TRUE}
+```{r read_shapefiles_method2, echo = TRUE, eval = TRUE}
 shp_bc <- file.path(dir_spatial, layer_bc)
 p4s_bc <- CRS('+proj=aea +lat_1=50 +lat_2=58.5 +lat_0=45 +lon_0=-126 +x_0=1000000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0')
 
@@ -103,7 +103,7 @@ Once the shapefile is read in, it becomes a SpatialPolygonsDataFrame object (fro
 
 Each of these slots can be accessed by a `@` symbol (rather than a `$` symbol).  If your SpatialPolygonsDataFrame is called `x`, then you can access the attribute table by calling `x@data` and treat it exactly like a regular data frame (though be wary of operations that might change the order or length of the data frame - confusion and chaos will reign!)
 
-```{r viewing SpatialPolygonsDataFrame slots, echo = TRUE, eval = TRUE}
+```{r viewing_SpatialPolygonsDataFrame_slots, echo = TRUE, eval = TRUE}
 ### view the overall structure
 summary(poly_bc_rgn)
 # str(poly_bc_rgn, max.level = 3) ### view object structure, similar to summary
@@ -136,7 +136,7 @@ If you'd like to add a column of data to the SpatialPolygonsDataFrame, for examp
 
 NOTE: When accessing the `@data` slot, keep in mind that all of the polygon information is in the `@polygons` slot - and the order of rows in `@data` needs to stay matched up with the order of the list in `@polygons`.  Changing the order of rows (or adding/deleting rows) in `@data` DOES NOT make analogous changes to `@polygons`... and chaos ensues.
 
-```{r adding data to SpatialPolygonsDataFrame, echo = TRUE, eval = TRUE}
+```{r adding_data_to_SpatialPolygonsDataFrame, echo = TRUE, eval = TRUE}
 ### create a data frame of harvest per region.  Note not all regions are represented here!
 harv_data <- data.frame(rgn_id   = c(  1,  2,  3,  5,  8),
                         h_tonnes = c(105, 89, 74, 21, 11))
@@ -151,7 +151,7 @@ poly_bc_rgn@data
 
 You should also be able to use `dplyr`- and `tidyr`-type functions like `mutate()` and `group_by()` (since `group_by()` doesn't reorder the rows); just be careful of things like `filter()`, `arrange()`, `summarize()`, and `full_join()` that might reorder or add or delete rows.
 
-``` {r}
+``` {r modifying_data_slot}
 poly_bc_rgn@data <- poly_bc_rgn@data %>%
   mutate(
     h_kg   = h_tonnes * 1000,
@@ -166,7 +166,7 @@ poly_bc_rgn@data
 
 Use indexing to select just rows where there is harvest data.  This eliminates the polygons as well as the attribute table rows, and resets the plot order.  Probably safer than filtering on the data slot directly...
 
-```{r selecting/filtering by attribute, echo = TRUE, eval = TRUE}
+```{r selecting_and_filtering_by_attribute, echo = TRUE, eval = TRUE}
 ### Select only regions with non-NA harvest values
 poly_bc_harvest <- poly_bc_rgn[!is.na(poly_bc_rgn@data$h_tonnes), ]
 
@@ -185,7 +185,7 @@ fun fact: the `rgb()` function allows you to specify color by Red/Green/Blue pro
 
 Mismatched coordinate reference systems are just as much a pain in R as they are in ArcGIS or QGIS.  But they're easy to work with once you know how to inspect them and re-project them.
 
-```{r fixing projections, echo = TRUE, eval = TRUE}
+```{r fixing_projections, echo = TRUE, eval = TRUE}
 ### Load and plot the MPA map on top of the regions
 poly_bc_mpa <- readOGR(dsn = dir_spatial, layer = 'mpa_bc_simple')
 
@@ -195,7 +195,7 @@ plot(poly_bc_mpa, col = rgb(1, .5, .5, .5), border = rgb(1, 0, 0, .5), add = TRU
 
 Note that the MPA polys don't show up on the map!  That's because of a CRS error...
 
-``` {r}
+``` {r check_proj4string}
 poly_bc_mpa@proj4string 
 ```
 
@@ -206,7 +206,7 @@ If the proj4string had been NA (e.g. if we had used `readShapePoly()` and not sp
 
 Reprojecting to a new CRS is not as simple as just assigning a new CRS to the `@proj4string` slot though... instead, we can use the `rgdal::spTransform()` function.
 
-``` {r}
+``` {r spTransform_example}
 poly_bc_mpa <- spTransform(poly_bc_mpa, p4s_bc)
 poly_bc_mpa@proj4string
 poly_bc_rgn@proj4string  ### OK, now they match!
@@ -229,7 +229,7 @@ Let's apply those to our polygon layers, in order to find how much of the coastl
 * Find the total area (`rgeos::gArea()`) of the near-shore ocean, from the coastline out to 3 nautical miles, for each of BC's regions.
 * Find the area of MPAs within 3 nm, and divide it by the total near-shore area.
 
-``` {r}
+``` {r setup_3nm_layer}
 ### Load in the 3 nm buffer layer
 poly_bc_3nm <- readShapePoly(fn = file.path(dir_spatial, 'ohibc_offshore_3nm_simple'), proj4string = p4s_bc)
 
@@ -280,7 +280,7 @@ Resolution note: since we're trying to analyze protected areas within a 3-nm-wid
 * If you have a fast computer, feel free to set the resolution smaller (e.g. 1 km) and see how the results compare.
 * For OHI, we have been using 500 meter cells on a global scale.  It takes a while...
 
-```{r set up base raster, echo = TRUE, eval = TRUE}
+```{r set_up_base_raster, echo = TRUE, eval = TRUE}
 ext <- extent(poly_bc_rgn); ext
 ext1 <- poly_bc_rgn@bbox; ext1
 
@@ -304,7 +304,7 @@ Next step: rasterize the MPA polygons.  See later in the doc for info on `gdalUt
 
 In this case, we will rasterize the MPA polygons using the `rast_base` raster to set extents and cell size.  The cells will get the value of the `STATUS_YR` attribute (the year in which the MPA was designated); for overlapping MPAs, the earliest year ('min') will be used.
 
-```{r rasterize MPA polygons, echo = TRUE, eval = TRUE}
+```{r rasterize_MPA_polygons, echo = TRUE, eval = TRUE, warning = FALSE}
 rast_bc_mpa <- rasterize(poly_bc_mpa, rast_base, field = 'STATUS_YR', fun = 'min')
 ```
 
@@ -325,7 +325,7 @@ The basic arguments are simply the raster with the interesting data, and the pol
 
 It's a bit processor-intensive so be patient...
 
-```{r raster::extract(), echo = TRUE, eval = TRUE}
+```{r raster_extract, echo = TRUE, eval = TRUE, warning = FALSE}
 ### plot the MPA raster with the 3 nm regions on top, just to see
 plot(poly_bc_rgn, col = rgb(.7, .7, 1, .5), border = NA)
 plot(rast_bc_mpa, add = TRUE)
@@ -341,7 +341,7 @@ mpa_by_rgn <- raster::extract(rast_bc_mpa, poly_bc_3nm, weights = FALSE)
 
 `raster::extract()` returns a list of vectors; each list item is a vector of all the cell values contained within one of the polygon features (`poly_bc_3nm@polygons`).  At this point, we need to assign a non-generic name to our list items so we can keep track.  The following line names the list items according to the `rgn_id` column in the attribute table contained in `poly_bc_3nm@data` (this works since the list is in order of items in the `@polygons` slot, which is the same order of attributes in the `@data` slot).
 
-```{r name list elements from raster::extract, echo = TRUE, eval = TRUE}
+```{r name_list_elements_from_raster_extract, echo = TRUE, eval = TRUE}
 names(mpa_by_rgn) <- poly_bc_3nm@data$rgn_id
 
 # names(mpa_by_rgn_weights) <- poly_bc_3nm@data$rgn_id
@@ -356,13 +356,14 @@ To get the data out of annoying list form and into convenient data frame form, t
 
 Voilà! a data frame of cell values by region.
 
-```{r convert list elements to data frame, echo = TRUE, eval = TRUE}
+```{r convert_list_elements_to_dataframe, echo = TRUE, eval = TRUE}
 ### For the dataframe without cell weights, each list is just a
 ### vector of values, so we can simply assign that to a column in
 ### the data frame.
 mpa_rgn_df <- data.frame()
 for (rgn_id in names(mpa_by_rgn)) {
-  temp_df <- data.frame(rgn_id = as.numeric(rgn_id), year = unlist(mpa_by_rgn[[rgn_id]]))
+  temp_df <- data.frame(rgn_id = as.numeric(rgn_id), 
+                        year   = unlist(mpa_by_rgn[[rgn_id]]))
   mpa_rgn_df <- rbind(mpa_rgn_df, temp_df)
 }
 
@@ -417,7 +418,7 @@ Most of what you need to know about rasters is covered in Jamie's spatial data w
 
 Note that one major issue with `gdal_rasterize()` (aside from the arcane argument list) is that in the event of overlapping polygons, there's no place for a decision rule as to which polygon value gets assigned to the cell.  If you know there are no overlaps, then this is a very fast and seemingly accurate option.
 
-```
+``` {r gdal_rasterize_example, echo = TRUE, eval = FALSE}
 library(gdalUtils)
 rast_3nm_gdal <- gdal_rasterize(
     src_datasource = file.path(dir_spatial, 'ohibc_offshore_3nm.shp'),
@@ -455,7 +456,7 @@ Sometimes shape files have errors - common ones are too few points or self-inter
 * An internet search might show you a few ways to repair invalid geometries, but some (like setting a buffer of zero width) might have unintended consequences - e.g. a zero-width buffer just deletes offending polygons entirely.  Not cool, bro!
 * The `cleangeo` package has tools for identifying problems, and has a tool to repair geometries.
 
-``` {r identifying and fixing errors, echo = TRUE, eval = FALSE}
+``` {r identifying_and_fixing_errors, echo = TRUE, eval = FALSE}
 rgn <- readShapePoly(fn = file.path(dir_spatial, 'ohibc_rgn'))
 gIsValid(rgn, byid = TRUE) 
 
@@ -481,7 +482,7 @@ issues ### No more issues?  though gIsValid seems to disagree...
 
 Note: make sure you have all your CRS and projection stuff figured out first!
 
-```{r plotting polygons in ggplot, echo = TRUE, eval = TRUE}
+```{r ggplot_for_maps, echo = TRUE, eval = TRUE}
 library(ggplot2)
 library(RColorBrewer)
 
@@ -496,10 +497,10 @@ poly_rgn_df <- fortify(poly_bc_rgn, region = 'rgn_id') %>%
 
 ### Note: Even though we already have a map with harvest data attached,
 ### I'm not sure that there's a good way to keep all the attributes
-### so I'm just left-joining some harvest data to the fortified data frame.
+### so I'm just left-joining harvest data to the fortified data frame.
 n_rgn <- length(poly_bc_rgn@data$rgn_id)
 harv_data2 <- data.frame(rgn_id   = c(1:n_rgn),
-                         h_tonnes = abs(rnorm(n = n_rgn, mean = 100, sd = 80)))
+                         h_tonnes = c(105, 89, 74, NA, 21, 0, NA, 11))
 
 poly_rgn_df <- poly_rgn_df %>%
   left_join(harv_data2, by = 'rgn_id')
@@ -535,11 +536,15 @@ ggsave(file.path(dir_spatial, 'bc_harvest.png'), width = 10, height = 6)
 
 ```
 
-`tmap` uses `tm_shape()` to define the object to be plotted, similar to `ggplot()`; and then layer assignments, similar to `geom_line()` or `geom_boxplot()` etc.
+## Plotting maps with tmap
 
-See here for more: https://cran.r-project.org/web/packages/tmap/vignettes/tmap-nutshell.html
+The `tmap` package uses a similar grammar to `ggplot2`, but seems way more intuitive for plotting maps.  You build up a map layer by layer, without having to do anything special to manipulate the polygons as you do for ggplot.
 
-```{r plotting polygons in tmap, echo = TRUE, eval = TRUE}
+`tmap` uses `tm_shape()` to define the object to be plotted, similar to `ggplot()`; and then layer assignments, similar to `geom_line()` or `geom_boxplot()` etc.  See here for more: https://cran.r-project.org/web/packages/tmap/vignettes/tmap-nutshell.html.
+
+First let's set up a basic map, and then use this to see what happens when we add additional layers, styles, etc.
+
+```{r tmap_basemap, echo = TRUE, eval = TRUE}
 library(tmap)
 library(RColorBrewer)
 
@@ -549,38 +554,69 @@ head(poly_bc_rgn@data, 3) ### what attributes can we plot?
 # 2     Strait of Georgia      6       SG       NA     NA   300     NA
 # 3           North Coast      1       NC      105 105000   300   0.35
 
-bc_map <-   
-  tm_shape(poly_land) +
-    tm_fill(col = 'grey30')
-
-bc_map
-
-bc_map <- bc_map +
-  tm_shape(poly_bc_rgn, is.master = TRUE) + ### is.master so this will drive extents, etc
+### set up base map, with land underneath and ocean regions on top
+bc_map_base <-   
+  tm_shape(poly_land) + ### this creates the bottom layer as the shaded land
+    tm_fill(col = 'grey40')
+bc_map_base <- bc_map_base +
+  tm_shape(poly_bc_rgn, is.master = TRUE) + ### is.master so this layer will drive extents, etc
     tm_fill(col = 'h_tonnes',
-            title.col = "Harvest (tonnes)") +
-    tm_borders(col = 'blue', lwd = 1) +
+            title = "Harvest (tonnes)") +
+    tm_borders(col = 'grey30', lwd = 1)
+print(bc_map_base)
+```
+
+Add a few extra layers to the base map; each of these layers directly accesses the attribute table (@data) in our BC harvest spatial polygons object.  You can also add additional shapes (e.g. we could add a layer based on the BC MPA spatial polygons object).
+
+``` {r tmap_extra_layers}
+### add additional layers to the base map, to display other data
+bc_map_layers <- bc_map_base +
     tm_bubbles(col = 'rgn_id', size = 'h_prop',
                title.size = "Harvest (proportion)", 
                legend.col.show = FALSE) +
     tm_text('rgn_code', size = 'h_prop', root = 5, 
-            legend.size.show = FALSE) +
-  tm_format_Europe() +
-  tm_style_natural()
+            legend.size.show = FALSE)
+print(bc_map_layers)
+```
 
-bc_map
+Map styles and small multiples are easy to do; and there is plenty of direct control on the formatting of the legend and other elements of the map.
+``` {r tmap_styling}
+### add some formatting and style to the base map
+bc_map_styled <- bc_map_base +
+  tm_format_Europe() + ### some auto-formatting of legend, plot area, etc...
+  tm_style_cobalt(title = 'British Columbia harvest')
+print(bc_map_styled)
 
 ### small multiples by passing a vector of variables to a layer
-bc_map2 <- bc_map +
+bc_map_multi <- bc_map_base +
   tm_shape(poly_bc_rgn, is.master = TRUE) + ### is.master so this will drive extents, etc
     tm_polygons(col = c('rgn_id', 'h_tonnes'))
-bc_map2
+print(bc_map_multi)
 
-### add compass, grids, etc?
-# Attribute layer	Description
-# tm_grid	        Add coordinate grid lines
-# tm_credits	    Add credits text label
-# tm_compass	    Add map compass
-# tm_scale_bar	  Add scale bar
+### format the legend of the base map
+bc_map_legend <- bc_map_base +
+  tm_style_cobalt(title = 'British Columbia harvest') +
+  tm_legend(text.size=1,
+            title.size=1.2,
+            position = c("left","bottom"), 
+            bg.color = "white", 
+            bg.alpha=.2, 
+            frame="gray50", 
+            height=.6, 
+            hist.width=.2,
+            hist.height=.2, 
+            hist.bg.color="gray60", 
+            hist.bg.alpha=.5)
+print(bc_map_legend)
+
+### instead of ggsave:
+save_tmap(bc_map_legend, "img/bc_map.png", width=1200, height=1000)
 
 ```
+
+Here's an example of a map created using `tmap`, with all the relevant code from the page above:
+![world map](img/world_map.png)
+
+## Other R spatial viz awesomeness
+
+Interactive maps can be created using other tools such as leaflet and plotly; these probably deserve a workshop all on their own.  
