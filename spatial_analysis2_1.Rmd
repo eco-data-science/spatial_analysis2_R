@@ -21,7 +21,6 @@ library(tidyr)
 library(stringr)
 ```
 
-
 This tutorial/workshop assumes that you have existing vector spatial data that you want to analyze.  You can create polygons and such directly in R, but we will save that for another time...
 
 # Reading shapefiles
@@ -491,6 +490,9 @@ library(RColorBrewer)
 poly_rgn_df <- fortify(poly_bc_rgn, region = 'rgn_id') %>%
   rename(rgn_id = id) %>%
   mutate(rgn_id = as.integer(rgn_id)) 
+### if you get the error "Error: isTRUE(gpclibPermitStatus()) is not TRUE" you
+### might need to do this: install.packages("gpclib", type="source")
+### then restart R to basically override the permit...
 
 ### Note: Even though we already have a map with harvest data attached,
 ### I'm not sure that there's a good way to keep all the attributes
@@ -530,5 +532,55 @@ print(df_plot)
 
 ### ggsave() saves the most recent ggplot object by default
 ggsave(file.path(dir_spatial, 'bc_harvest.png'), width = 10, height = 6)
+
+```
+
+`tmap` uses `tm_shape()` to define the object to be plotted, similar to `ggplot()`; and then layer assignments, similar to `geom_line()` or `geom_boxplot()` etc.
+
+See here for more: https://cran.r-project.org/web/packages/tmap/vignettes/tmap-nutshell.html
+
+```{r plotting polygons in tmap, echo = TRUE, eval = TRUE}
+library(tmap)
+library(RColorBrewer)
+
+head(poly_bc_rgn@data, 3) ### what attributes can we plot?
+#                rgn_name rgn_id rgn_code h_tonnes   h_kg h_tot h_prop
+# 1 West Vancouver Island      5       WV       21  21000   300   0.07
+# 2     Strait of Georgia      6       SG       NA     NA   300     NA
+# 3           North Coast      1       NC      105 105000   300   0.35
+
+bc_map <-   
+  tm_shape(poly_land) +
+    tm_fill(col = 'grey30')
+
+bc_map
+
+bc_map <- bc_map +
+  tm_shape(poly_bc_rgn, is.master = TRUE) + ### is.master so this will drive extents, etc
+    tm_fill(col = 'h_tonnes',
+            title.col = "Harvest (tonnes)") +
+    tm_borders(col = 'blue', lwd = 1) +
+    tm_bubbles(col = 'rgn_id', size = 'h_prop',
+               title.size = "Harvest (proportion)", 
+               legend.col.show = FALSE) +
+    tm_text('rgn_code', size = 'h_prop', root = 5, 
+            legend.size.show = FALSE) +
+  tm_format_Europe() +
+  tm_style_natural()
+
+bc_map
+
+### small multiples by passing a vector of variables to a layer
+bc_map2 <- bc_map +
+  tm_shape(poly_bc_rgn, is.master = TRUE) + ### is.master so this will drive extents, etc
+    tm_polygons(col = c('rgn_id', 'h_tonnes'))
+bc_map2
+
+### add compass, grids, etc?
+# Attribute layer	Description
+# tm_grid	        Add coordinate grid lines
+# tm_credits	    Add credits text label
+# tm_compass	    Add map compass
+# tm_scale_bar	  Add scale bar
 
 ```
