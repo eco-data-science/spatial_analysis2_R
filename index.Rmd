@@ -21,7 +21,9 @@ library(tidyr)
 library(stringr)
 ```
 
-This tutorial/workshop assumes that you have existing vector spatial data that you want to analyze.  You can create polygons and such directly in R, but we will save that for another time...
+
+
+-----
 
 # Reading shapefiles
 
@@ -87,6 +89,7 @@ plot(poly_bc_rgn, col = 'light blue', border = 'blue')
 * `readShapePoly()` doesn't automatically read in CRS info from a .prj file; you have to manually provide the coordinate reference system.
 * I prefer to stick with `readOGR()` where possible (especially for smaller files), to automatically use projection/CRS information where it is available.
 
+-----
 
 # Understanding spatial polygon objects in R
 
@@ -127,6 +130,8 @@ poly_bc_rgn@proj4string
 ```
 
 You can also manipulate these slots individually, for example filtering out rows of the dataframe in the `data` slot, but you will also need to treat the other slots accordingly.
+
+-----
 
 # Working with data in polygon objects
 
@@ -181,6 +186,8 @@ plot(poly_bc_harvest, col = rgb(.7, .3, .3, .5), border = rgb(1, 0, 0, .5), add 
 
 fun fact: the `rgb()` function allows you to specify color by Red/Green/Blue proportions (0 to 1), but also allows a fourth argument for 'alpha' (opacity) to create semi-transparent layers.  There are also similar `hsv()` and `hcl()` functions if you are a graphics nerd and prefer to specify hue/saturation/value or hue/chroma/luminance...
 
+-----
+
 # Fixing projections
 
 Mismatched coordinate reference systems are just as much a pain in R as they are in ArcGIS or QGIS.  But they're easy to work with once you know how to inspect them and re-project them.
@@ -218,6 +225,8 @@ plot(poly_bc_mpa, col = rgb(1, .5, .5, .5), border = rgb(1, .3, .3, .8), add = T
 ```
 
 Note that transforming projections might introduce geometry errors in a previously error-free Spatial object... for notes on checking and fixing this, see the appendix.
+
+-----
 
 # Geoprocessing tools
 
@@ -262,6 +271,8 @@ knitr::kable(prot_area_df)
 # or interactive table
 DT::datatable(prot_area_df)
 ```
+
+-----
 
 # Rasters and polygons
 
@@ -410,6 +421,8 @@ For a more complex version that maintains the spatial distribution of the data, 
 
 This [downres_polygons.R script](https://github.com/OHI-Science/ohiprep/blob/master/globalprep/spatial/downres_polygons.R) was used to simplify the high resolution global polygon shapefiles (308 MB of polygon fun) into [lower resolution files](https://github.com/OHI-Science/ohiprep/tree/master/globalprep/spatial/downres) (.7 MB and 11 MB versions) for quicker plotting.  While the script itself may not be all that useful to you, there are plenty of examples of digging into and manipulating the details of SpatialPolygonsDataFrame objects.  The script first examines each polygon feature, and strips out sub-polygons whose area falls below a certain threshold; then it simplifies the geometry of the remaining polygons using a [Douglas-Peuker algorithm](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm).
 
+-----
+
 # Appendix
 
 ## Alt method of rasterizing polygons
@@ -476,6 +489,8 @@ issues ### No more issues?  though gIsValid seems to disagree...
 
 ```
 
+-----
+
 ## Plotting polygons with ggplot2
 
 `ggplot` works with data frames; so if you want to plot a polygon, you need to first turn it into a data frame. `ggplot2::fortify()` takes care of this.  The `region` argument lets you assign a variable within the attribute table to become a region identifier.
@@ -535,6 +550,8 @@ print(df_plot)
 ggsave(file.path(dir_spatial, 'bc_harvest.png'), width = 10, height = 6)
 
 ```
+
+-----
 
 ## Plotting maps with tmap
 
