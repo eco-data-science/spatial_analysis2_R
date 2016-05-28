@@ -43,3 +43,5 @@ __Note:__ If you get an error trying to install the `rgdal` or `rgeos` packages,
 If you don't already have these on your laptop, install them, then go back and do the install.packages('rgdal'), install.packages('rgeos'), etc at your R command line afterward, just to make sure the R packages can access the info from these external libraries.
 
 I'll also show a super-fast demo with QGIS, a free GIS application that works on Mac and does most of the stuff that ArcGIS does.  [Here's more info on QGIS](http://www.qgis.org/en/site/)  We will not spend any time on it in the workshop though.
+
+Here's a link to a more in-depth tutorial on using spatial data in R: https://cran.r-project.org/doc/contrib/intro-spatial-rl.pdf
